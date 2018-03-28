@@ -9,5 +9,7 @@ module.exports = function (context) {
     context.log('dequeueCount = ', context.bindingData.dequeueCount);
 
     context.log(context.bindings.originalJob);
+    
+    context.log(context);
     context.done();
 };
