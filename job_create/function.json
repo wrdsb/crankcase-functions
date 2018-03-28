@@ -1,0 +1,30 @@
+{
+    "bindings": [
+        {
+            "name": "req",
+            "type": "httpTrigger",
+            "webHookType": "genericJson",
+            "direction": "in"
+        },
+        {
+            "name": "jobsQueueOut",
+            "type": "queue",
+            "queueName": "jobs",
+            "connection": "wrdsbcrankcase_STORAGE",
+            "direction": "out"
+        },
+        {
+            "name": "jobsTableOut",
+            "type": "table",
+            "tableName": "jobs",
+            "connection": "wrdsbcrankcase_STORAGE",
+            "direction": "out"
+        },
+        {
+            "name": "res",
+            "type": "http",
+            "direction": "out"
+        }
+    ],
+    "disabled": false
+}
