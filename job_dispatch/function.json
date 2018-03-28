@@ -11,8 +11,8 @@
             "name": "originalJob",
             "type": "table",
             "tableName": "jobs",
-            "partitionKey": "{queueMessage}",
-            "rowKey": "{queueMessage}",
+            "partitionKey": "{partitionKey}",
+            "rowKey": "{rowKey}",
             "connection": "wrdsbcrankcase_STORAGE",
             "direction": "in"
         },
