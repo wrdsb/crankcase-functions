@@ -16,8 +16,8 @@ module.exports = function (context, data) {
     }
 
     var job = {
-        job_type: data.service + '_' + data.operation,
         job_number: context.executionContext.invocationId,
+        job_type: data.service + '_' + data.operation,
         status: "created",
         service: data.service,
         operation: data.operation,
@@ -39,18 +39,13 @@ module.exports = function (context, data) {
 
     response.body = job;
 
-    var message = {
-        job_type: job.job_type,
-        job_number: job.job_number,
-        partitionKey: job.job_type,
-        rowKey: job.job_number
-    };
+    var message = job.job_number;
 
     context.bindings.jobsQueueOut = message;
 
     context.bindings.jobsTableOut = {
-        PartitionKey: job.job_type,
-        RowKey: job.job_number,
+        PartitionKey: job.job_number,
+        RowKey: 'job',
         job_type: job.job_type,
         job_number: job.job_number,
         status: job.status,
