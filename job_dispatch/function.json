@@ -11,8 +11,8 @@
             "name": "originalJob",
             "type": "table",
             "tableName": "jobs",
-            "partitionKey": "{queueTrigger}",
-            "rowKey": "{queueTrigger}",
+            "partitionKey": "{queueTrigger.partitionKey}",
+            "rowKey": "{queueTrigger.rowKey}",
             "connection": "wrdsbcrankcase_STORAGE",
             "direction": "in"
         },
