@@ -41,7 +41,9 @@ module.exports = function (context, data) {
 
     var message = {
         job_type: job.job_type,
-        job_number: job.job_number
+        job_number: job.job_number,
+        partitionKey: job.job_type,
+        rowKey: job.job_number
     };
 
     context.bindings.jobsQueueOut = message;
