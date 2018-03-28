@@ -1,7 +1,6 @@
 module.exports = function (context, data) {
     var timestamp = (new Date()).toJSON();
-
-    context.log(data);
+    var response = {};
 
     if (!data.service) {
         context.done('service is required');
@@ -32,9 +31,13 @@ module.exports = function (context, data) {
 
     if (data.callback) {
         job.callback = data.callback;
+        response.status = 202;
     } else {
         job.callback = null;
+        response.status = 200;
     }
+
+    response.body = job;
 
     var message = {
         job_type: job.job_type,
@@ -59,6 +62,8 @@ module.exports = function (context, data) {
         created_at: job.created_at,
         updated_at: job.updated_at
     };
+
+    context.res = response;
 
     context.done(null, 'Created job:', job);
 };
