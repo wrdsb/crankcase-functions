@@ -1,0 +1,28 @@
+{
+    "bindings": [
+        {
+            "name": "queueMessage",
+            "type": "queueTrigger",
+            "queueName": "jobs",
+            "connection": "wrdsbcrankcase_STORAGE",
+            "direction": "in"
+        },
+        {
+            "name": "originalJob",
+            "type": "table",
+            "tableName": "jobs",
+            "partitionKey": "{job_type}",
+            "rowKey": "{job_number}",
+            "connection": "wrdsbcrankcase_STORAGE",
+            "direction": "in"
+        },
+        {
+            "name": "updatedJob",
+            "type": "table",
+            "tableName": "jobs",
+            "connection": "wrdsbcrankcase_STORAGE",
+            "direction": "out"
+        },
+    ],
+    "disabled": false
+}
