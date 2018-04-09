@@ -15,13 +15,6 @@
             "rowKey": "job",
             "connection": "wrdsbcrankcase_STORAGE",
             "direction": "in"
-        },
-        {
-            "name": "updatedJob",
-            "type": "table",
-            "tableName": "jobs",
-            "connection": "wrdsbcrankcase_STORAGE",
-            "direction": "out"
         }
     ],
     "disabled": false
