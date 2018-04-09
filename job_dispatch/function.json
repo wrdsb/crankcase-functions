@@ -22,7 +22,7 @@
             "tableName": "jobs",
             "connection": "wrdsbcrankcase_STORAGE",
             "direction": "out"
-        },
+        }
     ],
     "disabled": false
 }
