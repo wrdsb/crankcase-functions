@@ -47,10 +47,12 @@ module.exports = function (context, data) {
 
     response.body = job;
 
-    var queue_message = job.job_number;
+    // Base64 encode message to keep queue happy
+    var queue_message = Buffer.from(job.job_number).toString('base64');
 
     tableService.insertEntity('jobs', job, function(error, result, response) {
         if (!error) {
+            // Only write to queue if write to table succeeded and finished.
             queueService.createMessage('jobs', queue_message, function(error) {
                 if (!error) {
                     // Message inserted
