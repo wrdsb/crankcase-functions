@@ -10,8 +10,8 @@ module.exports = function (context, data) {
         context.done('operation is required');
         return;
     }
-    if (!data.request) {
-        context.done('request is required');
+    if (!data.payload) {
+        context.done('payload is required');
         return;
     }
 
@@ -21,13 +21,17 @@ module.exports = function (context, data) {
         status: "created",
         service: data.service,
         operation: data.operation,
-        request: data.request,
+        request: data.payload,
         total_attempts: 0,
-        first_attempt: null,
-        last_attempt: null,
+        max_attempts: 0,
+        first_attempt_at: null,
+        last_attempt_at: null,
+        next_attempt_at: null,
         created_at: timestamp,
         updated_at: timestamp
     };
+    job.PartitionKey = job.job_number;
+    job.RowKey = 'job';
 
     if (data.callback) {
         job.callback = data.callback;
@@ -39,28 +43,12 @@ module.exports = function (context, data) {
 
     response.body = job;
 
-    var message = job.job_number;
+    var queue_message = job.job_number;
 
-    context.bindings.jobsQueueOut = message;
-
-    context.bindings.jobsTableOut = {
-        PartitionKey: job.job_number,
-        RowKey: 'job',
-        job_type: job.job_type,
-        job_number: job.job_number,
-        status: job.status,
-        service: job.service,
-        operation: job.operation,
-        request: job.request,
-        callback: job.callback,
-        total_attempts: job.total_attempts,
-        first_attempt: job.first_attempt,
-        last_attempt: job.last_attempt,
-        created_at: job.created_at,
-        updated_at: job.updated_at
-    };
-
+    context.bindings.jobsTableOut = job;
+    context.bindings.jobsQueueOut = queue_message;
     context.res = response;
-
+    context.log(job);
+    context.log(queue_message);
     context.done(null, 'Created job:', job);
 };
