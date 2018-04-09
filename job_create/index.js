@@ -25,7 +25,7 @@ module.exports = function (context, data) {
         status: "created",
         service: data.service,
         operation: data.operation,
-        request: data.payload,
+        payload: data.payload,
         total_attempts: 0,
         max_attempts: 0,
         first_attempt_at: null,
