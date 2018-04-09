@@ -2,6 +2,9 @@ module.exports = function (context, data) {
     var timestamp = (new Date()).toJSON();
     var trigger_response = {};
 
+    var async = require('async');
+    var azure = require('azure-storage');
+
     if (!data) {
         context.done('request body is required');
         return;
@@ -18,9 +21,6 @@ module.exports = function (context, data) {
         context.done('payload is required');
         return;
     }
-
-    var async = require('async');
-    var azure = require('azure-storage');
 
     var job = {
         job_number: context.executionContext.invocationId,
@@ -42,10 +42,10 @@ module.exports = function (context, data) {
 
     if (data.callback) {
         job.callback = data.callback;
-        response.status = 202;
+        trigger_response.status = 202;
     } else {
         job.callback = null;
-        response.status = 200;
+        trigger_response.status = 200;
     }
 
     trigger_response.body = job;
