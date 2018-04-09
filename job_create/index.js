@@ -28,7 +28,7 @@ module.exports = function (context, data) {
         status: "created",
         service: data.service,
         operation: data.operation,
-        payload: data.payload,
+        payload: JSON.stringify(data.payload),
         total_attempts: 0,
         max_attempts: 0,
         first_attempt_at: null,
@@ -68,7 +68,7 @@ module.exports = function (context, data) {
         },
         function(tableService, job, queue_message, trigger_response, callback) {
             var queueService = azure.createQueueService();
-            conext.log('create queue service');
+            context.log('create queue service');
             callback(null, queueService, tableService, job, queue_message, trigger_response);
         },
         function(queueService, tableService, job, queue_message, trigger_response, callback) {
