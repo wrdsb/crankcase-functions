@@ -1,6 +1,6 @@
 module.exports = function (context, data) {
     var timestamp = (new Date()).toJSON();
-    var response = {};
+    var trigger_response = {};
 
     if (!data) {
         context.done('request body is required');
@@ -19,9 +19,8 @@ module.exports = function (context, data) {
         return;
     }
 
+    var async = require('async');
     var azure = require('azure-storage');
-    var tableService = azure.createTableService();
-    var queueService = azure.createQueueService();
 
     var job = {
         job_number: context.executionContext.invocationId,
@@ -49,23 +48,47 @@ module.exports = function (context, data) {
         response.status = 200;
     }
 
-    response.body = job;
-
+    trigger_response.body = job;
+    
     // Base64 encode message to keep queue happy
     var queue_message = Buffer.from(job.job_number).toString('base64');
 
-    tableService.insertEntity('jobs', job, function(error, result, response) {
-        if (!error) {
-            // Only write to queue if write to table succeeded and finished.
+    context.log(job);
+    context.log(queue_message);
+
+    async.waterfall([
+        function(callback) {
+            callback(null, job, queue_message, trigger_response);
+        },
+        function(job, queue_message, trigger_response, callback) {
+            var tableService = azure.createTableService();
+            callback(null, tableService, job, queue_message, trigger_response);
+        },
+        function(tableService, job, queue_message, trigger_response, callback) {
+            var queueService = azure.createQueueService();
+            callback(null, queueService, tableService, job, queue_message, trigger_response);
+        },
+        function(queueService, tableService, job, queue_message, trigger_response, callback) {
+            tableService.insertEntity('jobs', job, function(error, result, response) {
+                if (!error) {
+                    callback(null, queueService, tableService, job, queue_message, trigger_response);
+                }
+            });
+        },
+        function(queueService, tableService, job, queue_message, trigger_response, callback) {
             queueService.createMessage('jobs', queue_message, function(error) {
                 if (!error) {
-                    context.res = response;
-                    context.log(job);
-                    context.log(queue_message);
-                    context.done(null, 'Created job:', job);
+                    callback(null, trigger_response);
                 }
             });
         }
+    ], function (err, trigger_response) {
+        if (err) {
+            context.done(err);
+        } else {
+            context.log(trigger_response);
+            context.res = trigger_response;
+            context.done(null, trigger_response);
+        }
     });
-
 };
