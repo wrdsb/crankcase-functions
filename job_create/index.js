@@ -70,14 +70,18 @@ module.exports = function (context, data) {
         },
         function(queueService, tableService, job, queue_message, trigger_response, callback) {
             tableService.insertEntity('jobs', job, function(error, result, response) {
-                if (!error) {
-                    callback(null, queueService, tableService, job, queue_message, trigger_response);
+                if (error) {
+                    callback(error);
+                } else {
+                    callback(null, queueService, job, queue_message, trigger_response);
                 }
             });
         },
-        function(queueService, tableService, job, queue_message, trigger_response, callback) {
+        function(queueService, job, queue_message, trigger_response, callback) {
             queueService.createMessage('jobs', queue_message, function(error) {
-                if (!error) {
+                if (error) {
+                    callback(error);
+                } else {
                     callback(null, trigger_response);
                 }
             });
