@@ -59,14 +59,13 @@ module.exports = function (context, data) {
             // Only write to queue if write to table succeeded and finished.
             queueService.createMessage('jobs', queue_message, function(error) {
                 if (!error) {
-                    // Message inserted. Yay!
+                    context.res = response;
+                    context.log(job);
+                    context.log(queue_message);
+                    context.done(null, 'Created job:', job);
                 }
             });
         }
     });
 
-    context.res = response;
-    context.log(job);
-    context.log(queue_message);
-    context.done(null, 'Created job:', job);
 };
