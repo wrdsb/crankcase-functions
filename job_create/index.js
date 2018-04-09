@@ -2,10 +2,10 @@ module.exports = function (context, data) {
     var timestamp = (new Date()).toJSON();
     var response = {};
 
-    var azure = require('azure-storage');
-    var tableService = azure.createTableService();
-    var queueService = azure.createQueueService();
-
+    if (!data) {
+        context.done('request body is required');
+        return;
+    }
     if (!data.service) {
         context.done('service is required');
         return;
@@ -18,6 +18,10 @@ module.exports = function (context, data) {
         context.done('payload is required');
         return;
     }
+
+    var azure = require('azure-storage');
+    var tableService = azure.createTableService();
+    var queueService = azure.createQueueService();
 
     var job = {
         job_number: context.executionContext.invocationId,
