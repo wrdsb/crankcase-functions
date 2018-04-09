@@ -58,14 +58,17 @@ module.exports = function (context, data) {
 
     async.waterfall([
         function(callback) {
+            context.log('start waterfall');
             callback(null, job, queue_message, trigger_response);
         },
         function(job, queue_message, trigger_response, callback) {
             var tableService = azure.createTableService();
+            context.log('create table service');
             callback(null, tableService, job, queue_message, trigger_response);
         },
         function(tableService, job, queue_message, trigger_response, callback) {
             var queueService = azure.createQueueService();
+            conext.log('create queue service');
             callback(null, queueService, tableService, job, queue_message, trigger_response);
         },
         function(queueService, tableService, job, queue_message, trigger_response, callback) {
@@ -73,6 +76,7 @@ module.exports = function (context, data) {
                 if (error) {
                     callback(error);
                 } else {
+                    context.log('create table entry');
                     callback(null, queueService, job, queue_message, trigger_response);
                 }
             });
@@ -82,6 +86,7 @@ module.exports = function (context, data) {
                 if (error) {
                     callback(error);
                 } else {
+                    context.log('create queue entry');
                     callback(null, trigger_response);
                 }
             });
