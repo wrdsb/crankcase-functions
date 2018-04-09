@@ -2,6 +2,10 @@ module.exports = function (context, data) {
     var timestamp = (new Date()).toJSON();
     var response = {};
 
+    var azure = require('azure-storage');
+    var tableService = azure.createTableService();
+    var queueService = azure.createQueueService();
+
     if (!data.service) {
         context.done('service is required');
         return;
@@ -17,7 +21,7 @@ module.exports = function (context, data) {
 
     var job = {
         job_number: context.executionContext.invocationId,
-        job_type: data.service + '_' + data.operation,
+        job_type: data.service + ':' + data.operation,
         status: "created",
         service: data.service,
         operation: data.operation,
@@ -45,8 +49,16 @@ module.exports = function (context, data) {
 
     var queue_message = job.job_number;
 
-    context.bindings.jobsTableOut = job;
-    context.bindings.jobsQueueOut = queue_message;
+    tableService.insertEntity('jobs', job, function(error, result, response) {
+        if (!error) {
+            queueService.createMessage('jobs', queue_message, function(error) {
+                if (!error) {
+                    // Message inserted
+                }
+            });
+        }
+    });
+
     context.res = response;
     context.log(job);
     context.log(queue_message);
