@@ -42,6 +42,8 @@ module.exports = function (context, data) {
                         callback(null, job);
                     }
                 });
+            } else {
+                callback(null, job);
             }
         },
         // Delete job from activeJobs table
