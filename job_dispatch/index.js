@@ -109,7 +109,7 @@ module.exports = function (context) {
             callback(null, queueService, tableService, job);
         },
         function(queueService, tableService, job, callback) {
-            tableService.insertEntity('jobs', job, function(error, result, response) {
+            tableService.insertEntity('activeJobs', job, function(error, result, response) {
                 if (!error) {
                     callback(null, queueService, job);
                 }

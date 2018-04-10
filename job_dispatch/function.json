@@ -10,7 +10,7 @@
         {
             "name": "originalJob",
             "type": "table",
-            "tableName": "jobs",
+            "tableName": "activeJobs",
             "partitionKey": "{queueTrigger}",
             "rowKey": "job",
             "connection": "wrdsbcrankcase_STORAGE",
