@@ -147,8 +147,7 @@ module.exports = function (context) {
             context.done(null, trigger_response);
         }
     });
-
-
+};
 
     //context.log('queueTrigger = ', context.bindingData.queueTrigger);
     //context.log('expirationTime = ', context.bindingData.expirationTime);
@@ -162,5 +161,3 @@ module.exports = function (context) {
 
     // else failure: re-queue
 
-    context.done();
-};
