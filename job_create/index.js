@@ -1,34 +1,31 @@
-module.exports = function (context, data) {
+module.exports = function (context) {
     var timestamp = (new Date()).toJSON();
-    var trigger_response = {};
+    var queue_message = context.bindings.queueMessage;
+    var job_request = JSON.parse(queue_message);
 
     var async = require('async');
     var azure = require('azure-storage');
 
-    if (!data) {
-        context.done('request body is required');
-        return;
-    }
-    if (!data.service) {
+    if (!job_request.service) {
         context.done('service is required');
         return;
     }
-    if (!data.operation) {
+    if (!job_request.operation) {
         context.done('operation is required');
         return;
     }
-    if (!data.payload) {
+    if (!job_request.payload) {
         context.done('payload is required');
         return;
     }
 
     var job = {
         job_number: context.executionContext.invocationId,
-        job_type: data.service + ':' + data.operation,
+        job_type: job_request.service + ':' + job_request.operation,
         status: "created",
-        service: data.service,
-        operation: data.operation,
-        payload: JSON.stringify(data.payload),
+        service: job_request.service,
+        operation: job_request.operation,
+        payload: JSON.stringify(job_request.payload),
         total_attempts: 0,
         max_attempts: 0,
         first_attempt_at: null,
@@ -40,59 +37,53 @@ module.exports = function (context, data) {
     job.PartitionKey = job.job_number;
     job.RowKey = 'job';
 
-    if (data.callback) {
-        job.callback = data.callback;
+    if (job_request.callback) {
+        job.callback = job_request.callback;
         trigger_response.status = 202;
     } else {
         job.callback = null;
         trigger_response.status = 200;
     }
 
-    trigger_response.body = job;
-    
-    // Base64 encode message to keep queue happy
-    var queue_message = Buffer.from(job.job_number).toString('base64');
-
     context.log(job);
-    context.log(queue_message);
 
     async.waterfall([
         function(callback) {
-            callback(null, job, queue_message, trigger_response);
+            callback(null, job);
         },
-        function(job, queue_message, trigger_response, callback) {
+        function(job, callback) {
             var tableService = azure.createTableService();
-            callback(null, tableService, job, queue_message, trigger_response);
+            callback(null, tableService, job);
         },
-        function(tableService, job, queue_message, trigger_response, callback) {
+        function(tableService, job, callback) {
             var queueService = azure.createQueueService();
-            callback(null, queueService, tableService, job, queue_message, trigger_response);
+            callback(null, queueService, tableService, job);
         },
-        function(queueService, tableService, job, queue_message, trigger_response, callback) {
+        function(queueService, tableService, job, callback) {
             tableService.insertEntity('activeJobs', job, function(error, result, response) {
                 if (error) {
                     callback(error);
                 } else {
-                    callback(null, queueService, job, queue_message, trigger_response);
+                    callback(null, queueService, job);
                 }
             });
         },
-        function(queueService, job, queue_message, trigger_response, callback) {
+        function(queueService, job, callback) {
+            // Base64 encode message to keep queue happy
+            var queue_message = Buffer.from(job.job_number).toString('base64');
             queueService.createMessage('jobs', queue_message, function(error) {
                 if (error) {
                     callback(error);
                 } else {
-                    callback(null, trigger_response);
+                    callback(null, job);
                 }
             });
         }
-    ], function (err, trigger_response) {
+    ], function (err, job) {
         if (err) {
             context.done(err);
         } else {
-            context.log(trigger_response);
-            context.res = trigger_response;
-            context.done(null, trigger_response);
+            context.done(null, job);
         }
     });
 };

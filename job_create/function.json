@@ -1,15 +1,11 @@
 {
     "bindings": [
         {
-            "name": "req",
-            "type": "httpTrigger",
-            "webHookType": "genericJson",
+            "name": "queueMessage",
+            "type": "queueTrigger",
+            "queueName": "requests",
+            "connection": "wrdsbcrankcase_STORAGE",
             "direction": "in"
-        },
-        {
-            "name": "res",
-            "type": "http",
-            "direction": "out"
         }
     ],
     "disabled": false
