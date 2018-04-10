@@ -21,7 +21,7 @@ module.exports = function (context) {
         return;
     }
 
-    // Create Job object...
+    // Create Job object ...
     var job = {
         job_number: context.executionContext.invocationId,
         job_type: job_request.service + ':' + job_request.operation,
@@ -37,8 +37,12 @@ module.exports = function (context) {
         created_at: timestamp,
         updated_at: timestamp
     };
+
+    // ... add table keys ...
     job.PartitionKey = job.job_number;
     job.RowKey = 'job';
+
+    // ... add callback property, if provided ...
     if (job_request.callback) {
         job.callback = job_request.callback;
     } else {
@@ -48,6 +52,8 @@ module.exports = function (context) {
     // ...and log that sucker.
     context.log(job);
 
+
+    // Use a waterfall to avoid async I/O issues
     async.waterfall([
 
         // Kickoff waterfall
