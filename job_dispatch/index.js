@@ -3,6 +3,7 @@ module.exports = function (context) {
     var queue_message = context.bindings.queueMessage;
     var job =  context.bindings.originalJob;
 
+    var async = require('async');
     var request = require('request');
     var azure = require('azure-storage');
     var tableService = azure.createTableService();
@@ -37,25 +38,22 @@ module.exports = function (context) {
             callback(null, job, request_options);
         },
         function(job, request_options, callback) {
-            request.post(request_options, function (error, response, body) {
-                if (error) {
-                    context.log('error:', error); // Print the error if one occurred
-                    callback(error);
-                } else {
-                    context.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
-                    context.log('body:', body); // Print the HTML for the Google homepage.
-                    callback(null, job, response, body);
-                }
-            });
-        },
-        function(job, response, body, callback) {
             job.total_attempts = job.total_attempts + 1;
             job.updated_at = timestamp;
             if (!job.first_attempt_at) {job.first_attempt_at = timestamp;}
             job.last_attempt_at = timestamp;
-        
+
+            var api_result = request.post(request_options, function (error, response, body) {
+                context.log('error:', error);
+                context.log('statusCode:', response && response.statusCode);
+                context.log('body:', body);
+                return {error: error, response: response, body: body};
+            });
+            callback(null, job, api_result);
+        },
+        function(job, api_result, callback) {
             // success? mark job a success in table
-            if (response.statusCode == 200) {
+            if (api_result.response.statusCode == 200) {
                 job.status = "success";
             // else fail or re-queue
             } else {
@@ -101,36 +99,37 @@ module.exports = function (context) {
             callback(null, job);
         },
         function(job, callback) {
-            var tableService = azure.createTableService();
-            callback(null, tableService, job);
-        },
-        function(tableService, job, callback) {
-            var queueService = azure.createQueueService();
-            callback(null, queueService, tableService, job);
-        },
-        function(queueService, tableService, job, callback) {
-            tableService.insertEntity('activeJobs', job, function(error, result, response) {
-                if (!error) {
-                    callback(null, queueService, job);
-                }
+            var tabled = tableService.replaceEntity('activeJobs', job, function(error, result, response) {
+                return {error: error, result: result, response: response};
             });
+            if (tabled.error) {
+                callback(error);
+            } else {
+                callback(null, job);
+            }
         },
-        function(queueService, job, callback) {
-            if (job.status == "success") {
-                // hand off to job_callback
-            } else if (job.status == "failed") {
-                // hand off to failure callback
+        function(job, callback) {
+            // If job has run its course, hand off to job_callback
+            if (job.status == "success" || job.status == "failed") {
+                var queue_message = Buffer.from(job.job_number).toString('base64');
+                queueService.createMessage('callbacks', queue_message, function(error) {
+                    if (error) {
+                        callback(error);
+                    }
+                });
+            // else, requeue
             } else {
                 var queue_message = Buffer.from(job.job_number).toString('base64');
                 var options = {};
                 var diff = Math.abs(job.next_attempt_at - new Date());
                 options.visibilityTimeout =  diff / 1000; // offset from current time, in seconds
                 queueService.createMessage('jobs', queue_message, options, function(error) {
-                    if (!error) {
-                        callback(null, job);
+                    if (error) {
+                        callback(error);
                     }
                 });
             }
+            callback(null, job);
         }
     ], function (err, trigger_response) {
         if (err) {
