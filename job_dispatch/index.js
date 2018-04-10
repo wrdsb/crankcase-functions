@@ -10,11 +10,15 @@ module.exports = function (context) {
     var tableService = azure.createTableService();
     var queueService = azure.createQueueService();
 
+    // TODO: job object validation
+
+    // Parse job object for API service request URL
     var service = job.service;
     var operation = job.operation;
     var service_key = '';
-    var payload = JSON.parse(job.payload);
+    var payload = JSON.parse(job.payload); // Table storage provides a string
 
+    // Assign key for API service
     switch (service) {
         case 'wrdsb-igor':
             service_key = process.env['igor_key'];
@@ -23,6 +27,7 @@ module.exports = function (context) {
             break;
     }
 
+    // Prepare HTTP request options for calling API service
     var request_options = {
         method: 'POST',
         url: `https://${service}.azurewebsites.net/api/${operation}?code=${service_key}&clientId=crankcase`,
@@ -34,42 +39,57 @@ module.exports = function (context) {
         json: payload
     };
 
+    // Use a waterfall to avoid async I/O issues
     async.waterfall([
+
+        // Kickoff waterfall
         function(callback) {
             callback(null, job, request_options);
         },
+
+        // Make our HTTP request to API service
         function(job, request_options, callback) {
+
+            // Increment tracking fields in job object
             job.total_attempts = job.total_attempts + 1;
             job.updated_at = timestamp;
             if (!job.first_attempt_at) {job.first_attempt_at = timestamp;}
             job.last_attempt_at = timestamp;
 
+            // Make the request
             request.post(request_options, function (error, response, body) {
                 if (error) {
                     context.log('error:', error);
-                    var api_result = {error: error, response: response, body: body};
-                    callback(null, job, api_result);
                 } else {
                     context.log('statusCode:', response && response.statusCode);
                     context.log('body:', body);
-                    var api_result = {error: error, response: response, body: body};
-                    callback(null, job, api_result);
                 }
+                // Pass along results for further handling, regardless of success/failure.
+                var api_result = {error: error, response: response, body: body};
+                callback(null, job, api_result);
             });
         },
+
+        // Process results of HTTP request
         function(job, api_result, callback) {
-            // success? mark job a success in table
+
+            // HTTP request success? Mark job a success in table.
             if (api_result.response && api_result.response.statusCode == 200) {
-                job.status = "success";
-            // else fail or re-queue
+                job.status = "successful";
+
+            // If not success, determine consequences
             } else {
-                // out of retries? mark failed
-                if (job.max_attempts != 0 && job.total_attempts >= job.max_attempts) {
+
+                // Are we out of retries? Mark job as failed.
+                if (job.max_attempts != 0 && job.total_attempts >= job.max_attempts) { // Allow infinite retries by setting max to zero.
                     job.status = "failed";
                     job.next_attempt_at = null;
-                // else requeue
+
+                // Retries remaining. Mark job as pending; requeue, with backoff.
                 } else {
                     job.status = "pending";
+
+                    // Determine backoff value
                     var next_attempt = new Date();
                     switch (total_attempts) {
                         case 1:
@@ -102,8 +122,11 @@ module.exports = function (context) {
                     }
                 }
             }
+            // Pass along job object, with status et al updated.
             callback(null, job);
         },
+
+        // Store our updated job in the activeJobs table
         function(job, callback) {
             tableService.replaceEntity('activeJobs', job, function(error, result, response) {
                 if (error) {
@@ -113,9 +136,12 @@ module.exports = function (context) {
                 }
             });
         },
+
+        // Queue either job_callback (job successful or failed), or job_dispatch (job pending)
         function(job, callback) {
-            // If job has run its course, hand off to job_callback
-            if (job.status == "success" || job.status == "failed") {
+
+            // If job has run its course, queue it for job_callback
+            if (job.status == "successful" || job.status == "failed") {
                 var queue_message = Buffer.from(job.job_number).toString('base64');
                 queueService.createMessage('callbacks', queue_message, function(error) {
                     if (error) {
@@ -124,12 +150,14 @@ module.exports = function (context) {
                         callback(null, job);
                     }
                 });
-            // else, requeue
+
+            // If job still pending, requeue it for job_dispatch, with delay
             } else {
                 var queue_message = Buffer.from(job.job_number).toString('base64');
                 var options = {};
                 var diff = Math.abs(job.next_attempt_at - new Date());
                 options.visibilityTimeout =  diff / 1000; // offset from current time, in seconds
+                context.log(options.visibilityTimeout);
                 queueService.createMessage('jobs', queue_message, options, function(error) {
                     if (error) {
                         callback(error);
@@ -139,15 +167,18 @@ module.exports = function (context) {
                 });
             }
         }
-    ], function (err, trigger_response) {
-        if (err) {
-            context.done(err);
-        } else {
-            context.log(trigger_response);
-            context.res = trigger_response;
-            context.done(null, trigger_response);
+    ], 
+
+        // Close waterfall, and function, by returning error or job object
+        function (err, job) {
+            if (err) {
+                context.done(err);
+            } else {
+                context.log(job);
+                context.done(null, job);
+            }
         }
-    });
+    );
 };
 
     //context.log('queueTrigger = ', context.bindingData.queueTrigger);
