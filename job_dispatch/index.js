@@ -43,17 +43,22 @@ module.exports = function (context) {
             if (!job.first_attempt_at) {job.first_attempt_at = timestamp;}
             job.last_attempt_at = timestamp;
 
-            var api_result = request.post(request_options, function (error, response, body) {
-                context.log('error:', error);
-                context.log('statusCode:', response && response.statusCode);
-                context.log('body:', body);
-                return {error: error, response: response, body: body};
+            request.post(request_options, function (error, response, body) {
+                if (error) {
+                    context.log('error:', error);
+                    var api_result = {error: error, response: response, body: body};
+                    callback(null, job, api_result);
+                } else {
+                    context.log('statusCode:', response && response.statusCode);
+                    context.log('body:', body);
+                    var api_result = {error: error, response: response, body: body};
+                    callback(null, job, api_result);
+                }
             });
-            callback(null, job, api_result);
         },
         function(job, api_result, callback) {
             // success? mark job a success in table
-            if (api_result.response.statusCode == 200) {
+            if (api_result.response && api_result.response.statusCode == 200) {
                 job.status = "success";
             // else fail or re-queue
             } else {
