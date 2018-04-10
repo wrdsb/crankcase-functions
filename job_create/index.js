@@ -5,6 +5,9 @@ module.exports = function (context) {
     var async = require('async');
     var azure = require('azure-storage');
 
+    var tableService = azure.createTableService();
+    var queueService = azure.createQueueService();
+
     // TODO: Better handling of malformed requests
 
     // Validate request object
@@ -63,7 +66,6 @@ module.exports = function (context) {
 
         // Write job to table storage to track progress
         function(job, callback) {
-            var tableService = azure.createTableService();
             tableService.insertEntity('activeJobs', job, function(error, result, response) {
                 if (error) {
                     callback(error);
@@ -77,7 +79,6 @@ module.exports = function (context) {
         function(job, callback) {
             // Base64 encode message to keep queue happy
             var queue_message = Buffer.from(job.job_number).toString('base64');
-            var queueService = azure.createQueueService();
             queueService.createMessage('jobs', queue_message, function(error) {
                 if (error) {
                     callback(error);
