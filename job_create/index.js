@@ -5,6 +5,9 @@ module.exports = function (context) {
     var async = require('async');
     var azure = require('azure-storage');
 
+    // TODO: Better handling of malformed requests
+
+    // Validate request object
     if (!job_request.service) {
         context.done('service is required');
         return;
@@ -18,6 +21,7 @@ module.exports = function (context) {
         return;
     }
 
+    // Create Job object...
     var job = {
         job_number: context.executionContext.invocationId,
         job_type: job_request.service + ':' + job_request.operation,
@@ -35,19 +39,23 @@ module.exports = function (context) {
     };
     job.PartitionKey = job.job_number;
     job.RowKey = 'job';
-
     if (job_request.callback) {
         job.callback = job_request.callback;
     } else {
         job.callback = null;
     }
 
+    // ...and log that sucker.
     context.log(job);
 
     async.waterfall([
+
+        // Kickoff waterfall
         function(callback) {
             callback(null, job);
         },
+
+        // Write job to table storage to track progress
         function(job, callback) {
             var tableService = azure.createTableService();
             tableService.insertEntity('activeJobs', job, function(error, result, response) {
@@ -58,6 +66,8 @@ module.exports = function (context) {
                 }
             });
         },
+
+        // Add queue message to trigger job dispatcher
         function(job, callback) {
             // Base64 encode message to keep queue happy
             var queue_message = Buffer.from(job.job_number).toString('base64');
@@ -70,11 +80,14 @@ module.exports = function (context) {
                 }
             });
         }
-    ], function (err, job) {
-        if (err) {
-            context.done(err);
-        } else {
-            context.done(null, job);
+    ],  
+        // Close waterfall, and function, by returning error or job object
+        function (err, job) {
+            if (err) {
+                context.done(err);
+            } else {
+                context.done(null, job);
+            }
         }
-    });
+    );
 };
