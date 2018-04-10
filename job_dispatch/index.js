@@ -99,14 +99,13 @@ module.exports = function (context) {
             callback(null, job);
         },
         function(job, callback) {
-            var tabled = tableService.replaceEntity('activeJobs', job, function(error, result, response) {
-                return {error: error, result: result, response: response};
+            tableService.replaceEntity('activeJobs', job, function(error, result, response) {
+                if (error) {
+                    callback(error);
+                } else {
+                    callback(null, job);
+                }
             });
-            if (tabled.error) {
-                callback(error);
-            } else {
-                callback(null, job);
-            }
         },
         function(job, callback) {
             // If job has run its course, hand off to job_callback
@@ -115,6 +114,8 @@ module.exports = function (context) {
                 queueService.createMessage('callbacks', queue_message, function(error) {
                     if (error) {
                         callback(error);
+                    } else {
+                        callback(null, job);
                     }
                 });
             // else, requeue
@@ -126,10 +127,11 @@ module.exports = function (context) {
                 queueService.createMessage('jobs', queue_message, options, function(error) {
                     if (error) {
                         callback(error);
+                    } else {
+                        callback(null, job);
                     }
                 });
             }
-            callback(null, job);
         }
     ], function (err, trigger_response) {
         if (err) {
