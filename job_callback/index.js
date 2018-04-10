@@ -1,11 +1,11 @@
 module.exports = function (context, data) {
     var timestamp = (new Date()).toJSON();
+    var queue_message = context.bindings.queueMessage;
+    var job =  context.bindings.originalJob;
+
     var async = require('async');
     var request = require('request');
     var azure = require('azure-storage');
-
-    var queue_message = context.bindings.queueMessage;
-    var job =  context.bindings.originalJob;
 
     var tableService = azure.createTableService();
 
