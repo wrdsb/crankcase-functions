@@ -9,7 +9,7 @@
         {
             "name": "job",
             "type": "table",
-            "tableName": "jobs",
+            "tableName": "activeJobs",
             "partitionKey": "{job_type}",
             "rowKey": "{job_number}",
             "connection": "wrdsbcrankcase_STORAGE",
