@@ -4,7 +4,6 @@ module.exports = function (context) {
     var azure = require('azure-storage');
 
     var queue_message = context.bindings.queueMessage;
-    var job_request = JSON.parse(queue_message);
 
     if (!job_request.service) {
         context.done('service is required');
