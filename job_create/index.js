@@ -3,7 +3,7 @@ module.exports = function (context) {
     var async = require('async');
     var azure = require('azure-storage');
 
-    var queue_message = context.bindings.queueMessage;
+    var job_request = context.bindings.queueMessage;
 
     if (!job_request.service) {
         context.done('service is required');
@@ -38,10 +38,8 @@ module.exports = function (context) {
 
     if (job_request.callback) {
         job.callback = job_request.callback;
-        trigger_response.status = 202;
     } else {
         job.callback = null;
-        trigger_response.status = 200;
     }
 
     context.log(job);
