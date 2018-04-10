@@ -1,9 +1,9 @@
 module.exports = function (context) {
     var timestamp = (new Date()).toJSON();
+    var job_request = context.bindings.queueMessage;
+
     var async = require('async');
     var azure = require('azure-storage');
-
-    var job_request = context.bindings.queueMessage;
 
     if (!job_request.service) {
         context.done('service is required');
@@ -50,24 +50,18 @@ module.exports = function (context) {
         },
         function(job, callback) {
             var tableService = azure.createTableService();
-            callback(null, tableService, job);
-        },
-        function(tableService, job, callback) {
-            var queueService = azure.createQueueService();
-            callback(null, queueService, tableService, job);
-        },
-        function(queueService, tableService, job, callback) {
             tableService.insertEntity('activeJobs', job, function(error, result, response) {
                 if (error) {
                     callback(error);
                 } else {
-                    callback(null, queueService, job);
+                    callback(null, job);
                 }
             });
         },
-        function(queueService, job, callback) {
+        function(job, callback) {
             // Base64 encode message to keep queue happy
             var queue_message = Buffer.from(job.job_number).toString('base64');
+            var queueService = azure.createQueueService();
             queueService.createMessage('jobs', queue_message, function(error) {
                 if (error) {
                     callback(error);
